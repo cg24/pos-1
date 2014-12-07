@@ -143,12 +143,9 @@ function get_count(item) {
     return parseInt(barcode_split_array[1]);
 }
 function get_items_from_barcodes(inputs){
-       var items = [];
-    for(var i =0;i < inputs.length;i++){
-        items[i] = get_item_by_barcode(inputs[i]);
-    }
-    return items;
-
+     return _.map(inputs,function(input){
+         return get_item_by_barcode(input);
+     });
 }
 function get_item_by_barcode(barcode){
     var all_items = loadAllItems();
