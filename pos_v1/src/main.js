@@ -21,8 +21,8 @@ function print_item(item){
    // var temp_item = item;
     var item_after_promot = get_promoted_item(item);
     var name = item.name;
-    var count = get_count(item);
-    var count_after_promot = get_count(item_after_promot);
+    var count = get_count_from_barcode(item);
+    var count_after_promot = get_count_from_barcode(item_after_promot);
     var price = item.price;
     var unit = item.unit;
     var total_price = price * count_after_promot;
@@ -41,8 +41,8 @@ function display_free_items(items){
 function  print_free_item(item){
     var item_after_promot = get_promoted_item(item);
     var name = item.name;
-    var count = get_count(item);
-    var count_after_promot = get_count(item_after_promot);
+    var count = get_count_from_barcode(item);
+    var count_after_promot = get_count_from_barcode(item_after_promot);
     var unit = item.unit;
     if(count - count_after_promot >0){
         return '名称：'+name+'，'+'数量：'+(count-count_after_promot)+unit+'\n';
@@ -63,15 +63,15 @@ function display_total_payed_and_saved(items){
 }
 function get_item_total_price(item){
     var item_after_promot = get_promoted_item(item);
-    var count = get_count(item_after_promot);
+    var count = get_count_from_barcode(item_after_promot);
     var price = item.price;
     return count*price;
 
 }
 function  get_item_saved_money(item){
     var item_after_promot = get_promoted_item(item);
-    var count = get_count(item);
-    var count_after_promot = get_count(item_after_promot);
+    var count = get_count_from_barcode(item);
+    var count_after_promot = get_count_from_barcode(item_after_promot);
     return (count-count_after_promot)*item.price;
 }
 function get_promoted_item(item){
@@ -97,7 +97,7 @@ function do_promot(promotion,item){
     var temp_item = copy_item(item);
     if(promotion.type === 'BUY_TWO_GET_ONE_FREE'){
         var count_after_promot ,count;
-        count = get_count(temp_item);
+        count = get_count_from_barcode(temp_item);
         count_after_promot = Math.floor(count/3)*2+count%3;
         temp_item.barcode = temp_item.barcode.split('-')[0]+'-'+count_after_promot;
         return temp_item;
@@ -105,42 +105,36 @@ function do_promot(promotion,item){
 }
 function count_items(items){
 
-    var items_list = [];
-    for(var i =0 ; i < items.length;i++){
-        items_list = add_goods_to_list(items_list,items[i]);
-    }
-   return items_list;
+    var counted_items_list = [];
+    _.each(items,function(item){
+          add_item_to_count_list(counted_items_list,item);
+    })
+   return counted_items_list;
 }
-function add_goods_to_list(list,item){
-    var temp_item = copy_item(item);
-    if(list.length == 0){
-        list[0] = temp_item;
-        return list;
-    }
-    var list_barcode,item_barcode,is_contained = false;
-    for(var i = 0;i < list.length;i++){
-        list_barcode = list[i].barcode.split('-')[0];
-        item_barcode = temp_item.barcode.split('-')[0];
-        if(list_barcode === item_barcode){
-            var count =get_count(list[i])+get_count(temp_item);
-            list[i].barcode = list_barcode+'-'+count;
-            is_contained = true;
-            break;
+function add_item_to_count_list(count_list,item){
+    var is_count_list_contain_item = false;
+    var pure_barcode= item.barcode.split("-")[0];
+    _.each(count_list,function(counted_list_item,index){
+        if(counted_list_item.barcode === pure_barcode){
+              count_list[index].number += get_count_from_barcode(item.barcode);
+            is_count_list_contain_item = true;
         }
+    });
+    if(is_count_list_contain_item === false ){
+        item.number = get_count_from_barcode(item.barcode);
+        item.barcode = pure_barcode;
+         count_list[count_list.length] = item;
     }
-    if(!is_contained){
-        var length = list.length;
-        list[length] = temp_item;
-    }
-    return list;
 }
-function get_count(item) {
-    var barcode = item.barcode;
+function get_count_from_barcode(barcode) {
     var barcode_split_array = barcode.split('-');
     if(barcode_split_array.length ===1){
         return 1;
     }
     return parseInt(barcode_split_array[1]);
+}
+function get_barcode_from_input_barcode(input) {
+    return input.split("-")[0];
 }
 function get_items_from_barcodes(inputs){
      return _.map(inputs,function(input){
