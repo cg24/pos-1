@@ -1,110 +1,104 @@
 function printInventory(inputs) {
-    var display_infomation="";
+    var display_receipt="";
     var temp_items = get_items_from_barcodes(inputs);
     var counted_items = count_items(temp_items);
-    display_infomation +=display_shoping_list(counted_items);
-    display_infomation +=display_free_items(counted_items);
-   display_infomation +=display_total_payed_and_saved(counted_items);
-    console.log(display_infomation);
+    var promoted_items = get_promoted_items(counted_items);
+    display_receipt +=build_shopping_list(promoted_items);
+    display_receipt +=build_free_items(promoted_items);
+   display_receipt +=build_total_payed_and_saved(promoted_items);
+    console.log(display_receipt);
 }
 
-function display_shoping_list(items){
+function build_shopping_list(items){
     var shoping_list = "***<没钱赚商店>购物清单***\n";
-    for(var i =0;i < items.length;i++){
-       shoping_list +=print_item(items[i]);
-    }
+    _.each(items,function(item){
+        shoping_list += build_shopping_list_details(item);
+    });
     shoping_list += '----------------------\n';
     return shoping_list;
 }
 
-function print_item(item){
-   // var temp_item = item;
-    var item_after_promot = get_promoted_item(item);
-    var name = item.name;
-    var count = get_count_from_barcode(item);
-    var count_after_promot = get_count_from_barcode(item_after_promot);
-    var price = item.price;
-    var unit = item.unit;
-    var total_price = price * count_after_promot;
-    return '名称：'+name+'，'+'数量：'+count+unit+'，'+'单价：'+parseFloat(price).toFixed(2)+'(元)，'+
-        '小计：'+parseFloat(total_price).toFixed(2)+'(元)\n';
+function build_shopping_list_details(item){
+    return '名称：'+item.name+'，'+'数量：'+item.number+item.unit+'，'+'单价：'+parseFloat(item.price).toFixed(2)+'(元)，'+
+        '小计：'+parseFloat(get_item_total_price(item)).toFixed(2)+'(元)\n';
 }
 
-function display_free_items(items){
+function build_free_items(items){
     var free_items_string = "挥泪赠送商品：\n";
-    for(var i = 0;i<items.length;i++){
-        free_items_string += print_free_item(items[i]);
-    }
+    _.each(items,function(item){
+        free_items_string +=build_free_item(item);
+    })
     free_items_string += '----------------------\n';
     return free_items_string;
 }
-function  print_free_item(item){
-    var item_after_promot = get_promoted_item(item);
-    var name = item.name;
-    var count = get_count_from_barcode(item);
-    var count_after_promot = get_count_from_barcode(item_after_promot);
-    var unit = item.unit;
-    if(count - count_after_promot >0){
-        return '名称：'+name+'，'+'数量：'+(count-count_after_promot)+unit+'\n';
+function  build_free_item(item){
+    if(get_free_count(item)>0){
+        return '名称：'+item.name+'，'+'数量：'+(item.number-item.number_after_promot)+item.unit+'\n';
     }
     return '';
 }
-function display_total_payed_and_saved(items){
-    var total_payed = 0,saved_money = 0;
-    var total_money_and_saved_string = "";
-    for(var i=0;i <items.length;i++){
-        total_payed += get_item_total_price(items[i]);
-        saved_money +=  get_item_saved_money(items[i]);
+function get_free_count(item){
+    if(item.number_after_promot!=undefined && item.number-item.number_after_promot >0){
+        return item.number-item.number_after_promot;
     }
-    total_money_and_saved_string  = "总计："+parseFloat(total_payed).toFixed(2)+"(元)\n"+
+    return 0;
+}
+function build_total_payed_and_saved(items){
+    var total_payed = 0,saved_money = 0;
+    var total_payed_and_saved_string = "";
+    _.each(items,function(item){
+        total_payed +=get_item_total_price(item);
+        saved_money += get_item_saved_money(item);
+    })
+    total_payed_and_saved_string  = "总计："+parseFloat(total_payed).toFixed(2)+"(元)\n"+
                          "节省："+parseFloat(saved_money).toFixed(2)+"(元)\n"+
                          "**********************";
-    return total_money_and_saved_string;
+    return total_payed_and_saved_string;
 }
 function get_item_total_price(item){
-    var item_after_promot = get_promoted_item(item);
-    var count = get_count_from_barcode(item_after_promot);
-    var price = item.price;
-    return count*price;
+    var total_price = item.price* item.number;
+    if(item.number_after_promot !=undefined){
+        total_price = item.price * item.number_after_promot;
+    }
+    return total_price;
 
 }
 function  get_item_saved_money(item){
-    var item_after_promot = get_promoted_item(item);
-    var count = get_count_from_barcode(item);
-    var count_after_promot = get_count_from_barcode(item_after_promot);
-    return (count-count_after_promot)*item.price;
+    return get_free_count(item) * item.price;
 }
-function get_promoted_item(item){
+function get_promoted_items(items){
+   return _.each(items,function(item){
+        item_do_promoted(item);
+    })
+}
+function item_do_promoted(item){
     var promotions = loadPromotions();
-    for(var i =0;i < promotions.length;i++){
-        if(check_can_promoted(promotions[i].barcodes,item)){
-            var promoted_item = do_promot(promotions[i],item);
-            return promoted_item;
+    _.each(promotions,function(promotion){
+        if(check_can_promoted(promotion,item)){
+           do_buy_two_get_one_free(promotion,item);
         }
-        return item;
-    }
+    })
 }
-function check_can_promoted(barcodes,item){
-    var item_barcodes = item.barcode.split('-')[0];
-       for(var i =0 ; i< barcodes.length;i++){
-           if(barcodes[i] === item_barcodes){
-               return true;
-           }
-       }
+function check_can_promoted(promotion,item){
+    var item_barcode = item.barcode.split('-')[0];
+    var can_promot_barcode = _.find(promotion.barcodes,function(promot_barcode){
+           return promot_barcode ==item_barcode;
+    });
+    if(can_promot_barcode !=undefined){
+        item.promotion_type = promotion.type;
+        return true;
+    }
     return false;
 }
-function do_promot(promotion,item){
-    var temp_item = copy_item(item);
+function do_buy_two_get_one_free(promotion,item){
     if(promotion.type === 'BUY_TWO_GET_ONE_FREE'){
         var count_after_promot ,count;
-        count = get_count_from_barcode(temp_item);
+        count = item.number;
         count_after_promot = Math.floor(count/3)*2+count%3;
-        temp_item.barcode = temp_item.barcode.split('-')[0]+'-'+count_after_promot;
-        return temp_item;
+        item.number_after_promot = count_after_promot;
     }
 }
 function count_items(items){
-
     var counted_items_list = [];
     _.each(items,function(item){
           add_item_to_count_list(counted_items_list,item);
