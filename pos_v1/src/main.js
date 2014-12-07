@@ -151,16 +151,15 @@ function get_items_from_barcodes(inputs){
 
 }
 function get_item_by_barcode(barcode){
-    var all_goods_items = loadAllItems();
+    var all_items = loadAllItems();
     var pure_barcode = barcode.split('-')[0];
-    var item;
-    for(var i = 0;i < all_goods_items.length;i++){
-        if(pure_barcode === all_goods_items[i].barcode){
-            item = all_goods_items[i];
-            item.barcode = barcode;
-        }
-    }
-    return item;
+    var result_item = _.find(all_items,function(item){
+            if(item.barcode === pure_barcode){
+                return item;
+            }
+    });
+    result_item.barcode = barcode;
+    return result_item;
 }
 function copy_item(item){
     var new_item ={};
